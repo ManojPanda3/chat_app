@@ -81,6 +81,34 @@ class ConnectionManager:
         """Return list of connected usernames."""
         return list(self.active_connections.keys())
 
+    async def broadcast_typing(self, username: str, exclude: Optional[str] = None):
+        """Broadcast that a user is typing (global)."""
+        await self.broadcast({
+            "type": "typing",
+            "data": {"username": username}
+        }, exclude=exclude or username)
+
+    async def send_typing(self, from_user: str, to_user: str):
+        """Send typing indicator to specific user."""
+        await self.send_personal(to_user, {
+            "type": "typing",
+            "data": {"username": from_user}
+        })
+
+    async def clear_typing_broadcast(self, username: str, exclude: Optional[str] = None):
+        """Clear typing indicator (global)."""
+        await self.broadcast({
+            "type": "typing_clear",
+            "data": {"username": username}
+        }, exclude=exclude or username)
+
+    async def send_clear_typing(self, from_user: str, to_user: str):
+        """Clear typing indicator for specific user."""
+        await self.send_personal(to_user, {
+            "type": "typing_clear",
+            "data": {"username": from_user}
+        })
+
 
 # Singleton
 manager = ConnectionManager()

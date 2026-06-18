@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
@@ -137,6 +138,51 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                             "type": "error",
                             "data": {"message": "Receiver not found"},
                         })
+
+            if msg_type == "typing":
+                receiver_id = data.get("receiver_id")
+                if receiver_id and receiver_id != "null" and receiver_id != "":
+                    # DM typing
+                    async with async_session_maker() as db:
+                        result = await db.execute(select(User).where(User.id == receiver_id))
+                        receiver = result.scalar_one_or_none()
+                    if receiver:
+                        await manager.send_typing(user.username, receiver.username)
+                        async def clear_later():
+                            await asyncio.sleep(2)
+                            await manager.send_clear_typing(user.username, receiver.username)
+                        asyncio.create_task(clear_later())
+                else:
+                    # Global typing
+                    await manager.broadcast_typing(user.username)
+                    async def clear_later_global():
+                        await asyncio.sleep(2)
+                        await manager.clear_typing_broadcast(user.username)
+                    asyncio.create_task(clear_later_global())
+
+            elif msg_type == "read_receipt":
+                # Mark messages as read
+                message_id = data.get("message_id")
+                if message_id:
+                    async with async_session_maker() as db:
+                        msg_result = await db.execute(
+                            select(Message).where(Message.id == message_id)
+                        )
+                        msg = msg_result.scalar_one_or_none()
+                        if msg:
+                            msg.is_read = True
+                            await db.commit()
+                        # Notify sender
+                        if msg and msg.sender_id:
+                            sender_result = await db.execute(
+                                select(User).where(User.id == msg.sender_id)
+                            )
+                            sender = sender_result.scalar_one_or_none()
+                            if sender:
+                                await manager.send_personal(sender.username, {
+                                    "type": "read_receipt",
+                                    "data": {"message_id": message_id, "reader": user.username}
+                                })
 
     except WebSocketDisconnect:
         await manager.broadcast_disconnect(user.username)

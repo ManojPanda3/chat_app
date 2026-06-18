@@ -3,6 +3,8 @@ let ws = null;
 let token = localStorage.getItem('token');
 let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 let currentView = 'global'; // 'global' or user_id for DM
+let typingTimeout = null;
+let typingUsers = new Set();
 
 // Check auth on load
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,6 +25,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto-scroll on new messages
     const observer = new MutationObserver(autoScroll);
     observer.observe(document.getElementById('chatMessages'), { childList: true });
+
+    // Typing indicator on input
+    document.getElementById('messageInput').addEventListener('input', () => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        
+        if (typingTimeout) clearTimeout(typingTimeout);
+        
+        ws.send(JSON.stringify({
+            type: 'typing',
+            receiver_id: currentView === 'global' ? null : currentView,
+        }));
+        
+        typingTimeout = setTimeout(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'typing',
+                    receiver_id: null, // Clear
+                }));
+            }
+        }, 2000);
+    });
 });
 
 function logout() {
@@ -43,6 +66,7 @@ function connectWebSocket() {
     
     ws.onopen = () => {
         console.log('[WS] Connected');
+        updateConnectionStatus('connected');
     };
     
     ws.onmessage = (event) => {
@@ -51,12 +75,12 @@ function connectWebSocket() {
     };
     
     ws.onclose = () => {
-        console.log('[WS] Disconnected. Reconnecting...');
+        updateConnectionStatus('disconnected');
         setTimeout(connectWebSocket, 3000);
     };
     
-    ws.onerror = (err) => {
-        console.error('[WS] Error:', err);
+    ws.onerror = () => {
+        updateConnectionStatus('error');
     };
 }
 
@@ -70,6 +94,23 @@ function handleWSMessage(data) {
             break;
         case 'system':
             appendSystemMessage(data.data);
+            break;
+        case 'typing':
+            typingUsers.add(data.data.username);
+            updateTypingDisplay();
+            break;
+        case 'typing_clear':
+            typingUsers.delete(data.data.username);
+            updateTypingDisplay();
+            break;
+        case 'read_receipt':
+            const msgEl = document.querySelector(`[data-msg-id="${data.data.message_id}"]`);
+            if (msgEl) {
+                const timeEl = msgEl.querySelector('.message-time');
+                if (timeEl) {
+                    timeEl.innerHTML += ' <i class="bi bi-check2-all" title="Read"></i>';
+                }
+            }
             break;
         case 'error':
             console.error('[WS] Server error:', data.data);
@@ -114,6 +155,7 @@ function appendMessage(msg) {
     
     const div = document.createElement('div');
     div.className = `message ${isOwn ? 'own' : ''}`;
+    div.setAttribute('data-msg-id', msg.id);
     div.innerHTML = `
         <div class="message-avatar">${initial}</div>
         <div class="message-content">
@@ -130,14 +172,49 @@ function appendSystemMessage(data) {
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = 'system-message';
-    
+
+    const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     if (data.event === 'user_joined') {
-        div.innerHTML = `<span class="badge bg-success bg-opacity-10 text-success">${escapeHtml(data.username)} joined</span>`;
+        div.innerHTML = `<span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-person-check"></i> ${escapeHtml(data.username)} joined</span> <small class="text-muted ms-2">${time}</small>`;
     } else if (data.event === 'user_left') {
-        div.innerHTML = `<span class="badge bg-danger bg-opacity-10 text-danger">${escapeHtml(data.username)} left</span>`;
+        div.innerHTML = `<span class="badge bg-danger bg-opacity-10 text-danger"><i class="bi bi-person-x"></i> ${escapeHtml(data.username)} left</span> <small class="text-muted ms-2">${time}</small>`;
     }
-    
+
     container.appendChild(div);
+}
+
+function updateTypingDisplay() {
+    const typingEl = document.getElementById('typingIndicator');
+    if (!typingEl) return;
+
+    if (typingUsers.size === 0) {
+        typingEl.textContent = '';
+    } else if (typingUsers.size === 1) {
+        typingEl.textContent = `${Array.from(typingUsers)[0]} is typing...`;
+    } else if (typingUsers.size === 2) {
+        const users = Array.from(typingUsers);
+        typingEl.textContent = `${users[0]} and ${users[1]} are typing...`;
+    } else {
+        typingEl.textContent = 'Several people are typing...';
+    }
+}
+
+function updateConnectionStatus(status) {
+    const statusEl = document.getElementById('connectionStatus');
+    if (!statusEl) return;
+
+    statusEl.className = 'connection-status';
+    if (status === 'connected') {
+        statusEl.innerHTML = '<span class="status-dot connected"></span> Connected';
+        statusEl.style.color = '#22c55e';
+    } else if (status === 'disconnected') {
+        statusEl.innerHTML = '<span class="status-dot disconnected"></span> Reconnecting...';
+        statusEl.style.color = '#f59e0b';
+    } else {
+        statusEl.innerHTML = '<span class="status-dot error"></span> Connection error';
+        statusEl.style.color = '#ef4444';
+    }
 }
 
 function escapeHtml(text) {

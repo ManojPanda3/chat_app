@@ -45,9 +45,12 @@
                     </button>
                     <h5 id="chatTitle" class="mb-0"><i class="bi bi-globe"></i> Global Chat</h5>
                 </div>
-                <button class="btn btn-sm btn-outline-secondary" onclick="loadMessages()">
-                    <i class="bi bi-arrow-clockwise"></i> Refresh
-                </button>
+                <div class="d-flex align-items-center gap-3">
+                    <span id="connectionStatus" class="connection-status small"></span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadMessages()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
             </div>
             
             <!-- Messages Area -->
@@ -58,6 +61,9 @@
                 </div>
             </div>
             
+            <!-- Typing Indicator -->
+            <div id="typingIndicator" class="typing-indicator px-3 py-1 small text-muted"></div>
+
             <!-- Message Input -->
             <div class="chat-input">
                 <form id="messageForm" class="d-flex gap-2">
