@@ -7,10 +7,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_maker
-from app.models import User, Message
+from app.models import User, Message, Conversation
 from app.websocket_manager import manager
 
 router = APIRouter(tags=["websocket"])
+
+
+async def ensure_conversation(sender_id: str, receiver_id: str):
+    """Auto-create Conversation if first DM between two users."""
+    from sqlalchemy import select, or_, and_
+
+    async with async_session_maker() as db:
+        result = await db.execute(
+            select(Conversation).where(
+                or_(
+                    and_(Conversation.user1_id == sender_id, Conversation.user2_id == receiver_id),
+                    and_(Conversation.user1_id == receiver_id, Conversation.user2_id == sender_id),
+                )
+            )
+        )
+        if not result.scalar_one_or_none():
+            conv = Conversation(user1_id=sender_id, user2_id=receiver_id)
+            db.add(conv)
+            await db.commit()
 
 
 async def authenticate_ws(token: str) -> User:
@@ -99,6 +118,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
                         "data": msg_data,
                     })
                 else:
+                    await ensure_conversation(user.id, receiver_id)
                     async with async_session_maker() as db:
                         result = await db.execute(select(User).where(User.id == receiver_id))
                         receiver = result.scalar_one_or_none()

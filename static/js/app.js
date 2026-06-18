@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('currentUsername').textContent = currentUser.username;
     loadMessages();
     loadOnlineUsers();
+    loadConversations();
     connectWebSocket();
     
     // Message form
@@ -63,6 +64,9 @@ function handleWSMessage(data) {
     switch (data.type) {
         case 'message':
             appendMessage(data.data);
+            if (data.data.receiver_id && data.data.receiver_id !== 'null') {
+                loadConversations();
+            }
             break;
         case 'system':
             appendSystemMessage(data.data);
@@ -87,6 +91,7 @@ function sendMessage(e) {
     
     ws.send(JSON.stringify(msg));
     input.value = '';
+    setTimeout(loadConversations, 500);
 }
 
 // UI
@@ -195,16 +200,67 @@ async function loadOnlineUsers() {
     }
 }
 
+async function loadConversations() {
+    try {
+        const res = await fetch('/api/conversations', {
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const convos = await res.json();
+
+        const list = document.getElementById('dmList');
+        if (convos.length === 0) {
+            list.innerHTML = '<div class="text-muted small px-3 py-2">No DMs yet. Click a user to start!</div>';
+            return;
+        }
+
+        list.innerHTML = convos.map(c => `
+            <div class="list-group-item d-flex align-items-center justify-content-between"
+                 onclick="openDM('${c.user2_id === '${currentUser.id}' ? c.user1_id : c.user2_id}', '${escapeHtml(c.other_user ? c.other_user.username : '')}')">
+                <span>${c.other_user ? escapeHtml(c.other_user.username) : 'Unknown'}</span>
+                <small class="text-muted"><i class="bi bi-chat"></i></small>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('Failed to load conversations:', err);
+    }
+}
+
 function openDM(userId, username) {
     if (userId === currentUser.id) return;
     currentView = userId;
     document.getElementById('chatTitle').innerHTML = `<i class="bi bi-envelope"></i> ${escapeHtml(username)}`;
     document.getElementById('messageInput').placeholder = `Message ${escapeHtml(username)}...`;
+
+    // Add back button
+    const header = document.querySelector('.chat-header');
+    if (!header.querySelector('.btn-back')) {
+        const refreshBtn = header.querySelector('button');
+        const backBtn = document.createElement('button');
+        backBtn.className = 'btn btn-sm btn-outline-primary btn-back me-2';
+        backBtn.innerHTML = '<i class="bi bi-arrow-left"></i> Global';
+        backBtn.onclick = backToGlobal;
+        refreshBtn.parentNode.insertBefore(backBtn, refreshBtn);
+    }
+
     loadMessages();
-    
-    // Highlight in sidebar
-    document.querySelectorAll('#onlineUsersList .list-group-item').forEach(el => el.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    loadConversations();
+
+    // Highlight
+    document.querySelectorAll('#onlineUsersList .list-group-item, #dmList .list-group-item').forEach(el => el.classList.remove('active'));
+    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+}
+
+function backToGlobal() {
+    currentView = 'global';
+    document.getElementById('chatTitle').innerHTML = '<i class="bi bi-globe"></i> Global Chat';
+    document.getElementById('messageInput').placeholder = 'Type a message...';
+
+    // Remove back button
+    const backBtn = document.querySelector('.btn-back');
+    if (backBtn) backBtn.remove();
+
+    loadMessages();
+    document.querySelectorAll('.list-group-item').forEach(el => el.classList.remove('active'));
 }
 
 // Toggle sidebar on mobile
