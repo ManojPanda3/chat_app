@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatApp - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-light">
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-5 col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4"><i class="bi bi-chat-dots"></i> ChatApp</h2>
+                        
+                        <!-- Login Form -->
+                        <form id="loginForm" class="mb-4">
+                            <div class="mb-3">
+                                <label for="loginUsername" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="loginUsername" required autocomplete="username">
+                            </div>
+                            <div class="mb-3">
+                                <label for="loginPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="loginPassword" required autocomplete="current-password">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Login</button>
+                            <div id="loginError" class="alert alert-danger mt-3 d-none"></div>
+                        </form>
+                        
+                        <hr>
+                        
+                        <!-- Register Form -->
+                        <form id="registerForm">
+                            <h5 class="text-center mb-3">New User? Register</h5>
+                            <div class="mb-3">
+                                <label for="regUsername" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="regUsername" required minlength="3" maxlength="50">
+                            </div>
+                            <div class="mb-3">
+                                <label for="regPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="regPassword" required minlength="6">
+                            </div>
+                            <button type="submit" class="btn btn-secondary w-100">Register</button>
+                            <div id="regError" class="alert alert-danger mt-3 d-none"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>

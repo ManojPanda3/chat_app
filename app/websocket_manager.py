@@ -1,86 +1,86 @@
+"""
+WebSocket connection manager.
+Handles active connections, broadcasting to all/global, and sending to specific users.
+"""
 import json
-from typing import Dict, Optional
-from fastapi import WebSocket
+from typing import Dict, Set, Optional
+from fastapi import WebSocket, WebSocketDisconnect
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database import async_session_maker
+from app.models import User, Message
 
-class WebSocketManager:
-    """Manages WebSocket connections and message routing."""
-    
+
+class ConnectionManager:
     def __init__(self):
-        # Maps username -> WebSocket connection
+        # username -> WebSocket
         self.active_connections: Dict[str, WebSocket] = {}
-        # Maps username -> user_id
-        self.user_ids: Dict[str, int] = {}
-    
-    def connect(self, websocket: WebSocket, username: str, user_id: int) -> None:
-        """Accept connection and register user."""
+        # username -> user_id
+        self.user_ids: Dict[str, str] = {}
+
+    async def connect(self, websocket: WebSocket, username: str, user_id: str):
+        """Accept and register a WebSocket connection."""
+        await websocket.accept()
         self.active_connections[username] = websocket
         self.user_ids[username] = user_id
-        websocket.username = username
-        websocket.user_id = user_id
-    
-    def disconnect(self, username: str) -> None:
-        """Remove user on disconnect."""
+        # Set online status
+        async with async_session_maker() as db:
+            result = await db.execute(select(User).where(User.username == username))
+            user = result.scalar_one_or_none()
+            if user:
+                user.is_online = True
+                await db.commit()
+
+    def disconnect(self, username: str):
+        """Remove a WebSocket connection."""
         self.active_connections.pop(username, None)
         self.user_ids.pop(username, None)
-    
-    def get_user_id(self, username: str) -> Optional[int]:
-        """Get user ID from username."""
-        return self.user_ids.get(username)
-    
-    def is_online(self, username: str) -> bool:
-        """Check if a user is currently connected."""
-        return username in self.active_connections
-    
-    async def send_personal_message(self, username: str, message: dict) -> None:
+
+    async def send_personal(self, username: str, message: dict):
         """Send a message to a specific user."""
-        websocket = self.active_connections.get(username)
-        if websocket:
-            await websocket.send_json(message)
-    
-    async def broadcast(self, message: dict, exclude: Optional[str] = None) -> None:
-        """Broadcast a message to all connected users, optionally excluding one."""
+        ws = self.active_connections.get(username)
+        if ws:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                self.disconnect(username)
+
+    async def send_personal_text(self, username: str, text: str):
+        """Send raw text to a specific user."""
+        ws = self.active_connections.get(username)
+        if ws:
+            try:
+                await ws.send_text(text)
+            except Exception:
+                self.disconnect(username)
+
+    async def broadcast(self, message: dict, exclude: Optional[str] = None):
+        """Broadcast a JSON message to all connected users."""
         disconnected = []
-        for username, websocket in self.active_connections.items():
-            if username != exclude:
-                try:
-                    await websocket.send_json(message)
-                except Exception:
-                    disconnected.append(username)
-        # Clean up disconnected users
+        for username, ws in self.active_connections.items():
+            if username == exclude:
+                continue
+            try:
+                await ws.send_json(message)
+            except Exception:
+                disconnected.append(username)
         for username in disconnected:
             self.disconnect(username)
-    
-    async def broadcast_global(self, message: dict) -> None:
-        """Broadcast to all connected users (global chat)."""
-        await self.broadcast(message)
-    
-    async def send_dm(self, sender: str, receiver: str, message: dict) -> None:
-        """Send a direct message between two users."""
-        # Send to receiver
-        await self.send_personal_message(receiver, message)
-        # Send confirmation back to sender
-        await self.send_personal_message(sender, message)
-    
-    async def broadcast_user_joined(self, username: str) -> None:
-        """Notify all users that someone joined."""
-        await self.broadcast({
-            "type": "user.joined",
-            "data": {"username": username}
-        })
-    
-    async def broadcast_user_left(self, username: str) -> None:
-        """Notify all users that someone left."""
-        await self.broadcast({
-            "type": "user.left",
-            "data": {"username": username}
-        })
-    
-    def get_online_users(self) -> list[dict]:
-        """Get list of currently online users."""
-        return [
-            {"username": username, "user_id": uid}
-            for username, uid in self.user_ids.items()
-        ]
 
-# Singleton instance
-manager = WebSocketManager()
+    async def broadcast_disconnect(self, username: str):
+        """Mark user as offline and remove connection."""
+        async with async_session_maker() as db:
+            result = await db.execute(select(User).where(User.username == username))
+            user = result.scalar_one_or_none()
+            if user:
+                user.is_online = False
+                await db.commit()
+        self.disconnect(username)
+
+    def get_active_usernames(self) -> list:
+        """Return list of connected usernames."""
+        return list(self.active_connections.keys())
+
+
+# Singleton
+manager = ConnectionManager()
