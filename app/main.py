@@ -1,3 +1,7 @@
+from app.routes.conversations import router as conversations_router
+from app.routes.ws import router as ws_router
+from app.routes.messages import router as messages_router
+from app.routes.auth import router as auth_router
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -43,16 +47,10 @@ if static_dir.exists():
 async def serve_index():
     """Serve the main chat page."""
     index_path = static_dir / "index.html"
-    if index_path.exists():
-        return FileResponse(index_path)
-    return FileResponse(static_dir / "login.html")
+    return FileResponse(index_path)
 
 
 # Register routers
-from app.routes.auth import router as auth_router
-from app.routes.messages import router as messages_router
-from app.routes.ws import router as ws_router
-from app.routes.conversations import router as conversations_router
 
 app.include_router(auth_router)
 app.include_router(messages_router)

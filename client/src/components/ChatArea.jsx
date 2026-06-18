@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Users,
   Search,
+  ArrowLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -28,7 +29,7 @@ function formatTime(timestamp) {
 export default function ChatArea({
   view, messages, currentUsername, dmPartnerName,
   typingDisplay, wsStatus, onSendMessage, onTyping,
-  onRefresh
+  onRefresh, onBack
 }) {
   const messagesEndRef = useRef(null)
   const [inputValue, setInputValue] = useState('')
@@ -50,8 +51,12 @@ export default function ChatArea({
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#09090b] relative">
       {/* Header */}
-      <div className="h-16 px-6 flex items-center justify-between bg-zinc-950/50 backdrop-blur-xl border-b border-zinc-800 shrink-0 z-10">
-        <div className="flex items-center gap-4">
+      <div className="h-16 px-4 sm:px-6 flex items-center justify-between bg-zinc-950/50 backdrop-blur-xl border-b border-zinc-800 shrink-0 z-10">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" className="md:hidden rounded-full w-10 h-10 -ml-2 text-zinc-400 hover:text-white" onClick={onBack}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          
           {isDM ? (
             <div className="relative">
               <Avatar className="w-10 h-10 border border-zinc-800">

@@ -14,8 +14,12 @@ async_session_maker = async_sessionmaker(
     expire_on_commit=False,
 )
 
+# the following is from docs of sqlalchemy
+
+
 class Base(DeclarativeBase):
     pass
+
 
 async def get_db():
     """FastAPI dependency for DB sessions."""
@@ -26,6 +30,7 @@ async def get_db():
         except Exception:
             await session.rollback()
             raise
+
 
 async def init_db():
     """Create all tables. Call once at startup."""

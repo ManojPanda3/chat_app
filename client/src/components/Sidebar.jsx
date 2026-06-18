@@ -34,7 +34,7 @@ export default function Sidebar({ user, currentView, onOpenDM }) {
   )
 
   return (
-    <div className="w-[380px] flex flex-col bg-[#09090b] border-r border-zinc-800 h-full shrink-0">
+    <div className="w-full flex flex-col bg-[#09090b] h-full">
       {/* Sidebar Header */}
       <div className="h-20 px-6 flex items-center justify-between bg-zinc-950/30 shrink-0 border-b border-zinc-900">
         <div className="flex items-center gap-4">
