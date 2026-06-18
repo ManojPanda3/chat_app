@@ -3,9 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Boolean, Index, Integer
 from sqlalchemy.orm import relationship
 from app.database import Base
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 class User(Base):
     __tablename__ = "users"
@@ -21,10 +19,14 @@ class User(Base):
     messages_received = relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver")
 
     def set_password(self, password: str) -> None:
-        self.password_hash = pwd_context.hash(password)
+        self.password_hash = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
 
     def check_password(self, password: str) -> bool:
-        return pwd_context.verify(password, self.password_hash)
+        return bcrypt.checkpw(
+            password.encode("utf-8"), self.password_hash.encode("utf-8")
+        )
 
 class Message(Base):
     __tablename__ = "messages"

@@ -48,6 +48,8 @@ class ConversationResponse(BaseModel):
     user2_id: str
     created_at: datetime
     other_user: Optional[UserResponse] = None
+    last_message: Optional[str] = None
+    last_message_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 

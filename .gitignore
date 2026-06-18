@@ -31,3 +31,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+node_modules
+client/node_modules
+dist
+client/dist

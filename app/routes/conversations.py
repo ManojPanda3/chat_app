@@ -58,6 +58,10 @@ async def get_my_conversations(
         conv_response = ConversationResponse.model_validate(conv)
         conv_response.other_user = UserResponse.model_validate(other_user) if other_user else None
         
+        if last_msg:
+            conv_response.last_message = last_msg.content
+            conv_response.last_message_at = last_msg.timestamp
+        
         response.append(conv_response)
     
     return response
