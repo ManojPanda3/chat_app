@@ -38,5 +38,6 @@ async def serve_index():
     return FileResponse(static_dir / "login.html")
 
 
-# Routes are imported lazily to avoid circular imports
-# They will be registered here once created
+# Register routers
+from app.routes.auth import router as auth_router
+app.include_router(auth_router)
