@@ -92,7 +92,7 @@ export default function ChatArea({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-4 sm:px-8 py-6 z-10">
+      <ScrollArea className="flex-1 px-4 sm:px-8 py-6 z-10 overflow-y-auto">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-zinc-600 space-y-4 pt-20 animate-in fade-in duration-700">
             <div className="p-8 rounded-3xl bg-zinc-900/50 border border-zinc-800">

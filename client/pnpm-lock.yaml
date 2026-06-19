@@ -48,6 +48,9 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
     devDependencies:
+      '@tailwindcss/oxide-linux-x64-gnu':
+        specifier: ^4.3.1
+        version: 4.3.1
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.1(vite@6.4.3(jiti@2.7.0)(lightningcss@1.32.0))
@@ -766,7 +769,6 @@ packages:
     engines: {node: '>= 20'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@tailwindcss/oxide-linux-x64-musl@4.3.1':
     resolution: {integrity: sha512-M+P/91qJ6uILLw4k2G93GMDRAXj61SMvFQYt39AqvUqYgExXpLL5aepfns7sj4HiAQeolirQF9E0lzRvdf4zPQ==}
@@ -2722,8 +2724,7 @@ snapshots:
   '@tailwindcss/oxide-linux-arm64-musl@4.3.1':
     optional: true
 
-  '@tailwindcss/oxide-linux-x64-gnu@4.3.1':
-    optional: true
+  '@tailwindcss/oxide-linux-x64-gnu@4.3.1': {}
 
   '@tailwindcss/oxide-linux-x64-musl@4.3.1':
     optional: true
